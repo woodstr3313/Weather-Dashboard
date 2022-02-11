@@ -19,11 +19,22 @@
     <header class="jumbotron">
         <h1 class="display-5">Weather Dashboard</h1>
     </header>
-    <div class="City-Search"> Search for a City: </div>
-    <ul class="Search-Results"></ul> 
+    <aside>
+        <h2>
+            Search for City
+        </h2>
+        <form id="search-form">
+            <input type="text" id="city-input" placeholder="City Name">
+            <button type="submit" id="search-button">
+                Search
+            </button>
     
+        </form>
+    </aside>
+    <div id="button" class="Search-Button">
+    <ul class="Search-Results"></ul> 
 
-    <div id="button" class="container">
+
         
 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.2.1/jquery.min.js"></script>
