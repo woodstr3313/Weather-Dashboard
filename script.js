@@ -22,6 +22,17 @@ function getCoordinates(event) {
      getForecast(data);
     });
 
+    const searchHistoryKey = "searchHistory";
+    var searchHistoryList = localStorage.getItem(searchHistoryKey)
+
+    if (!searchHistoryList){
+      searchHistoryList = []
+    }
+
+    //TODO: Truncate to max 8 list items
+    searchHistoryList.push(city) 
+    localStorage.setItem(searchHistoryKey, searchHistoryList)
+
 }
 //Function to get forecast with coordinates
 function getForecast(coord) {
@@ -91,8 +102,8 @@ btn.addEventListener("click", getCoordinates)
 // var city = "woodstock";
 // var search_Button = [
 
-// ];
+// // ];
 
 // var list_Results = [
-
-// ];
+ 
+// // ];
