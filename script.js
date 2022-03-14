@@ -22,17 +22,20 @@ function getCoordinates(event) {
      getForecast(data);
     });
 
-    const searchHistoryKey = "searchHistory";
-    var searchHistoryList = localStorage.getItem(searchHistoryKey)
+    const searchHistoryKey = "searchHistory1";
+    var searchHistoryList = JSON.parse (localStorage.getItem(searchHistoryKey))
 
     if (!searchHistoryList){
       searchHistoryList = []
     }
-
-    //TODO: Truncate to max 8 list items
+    
+    if (searchHistoryList.length >= 8) {
+       searchHistoryList = searchHistoryList.slice(-7);
+    }
+   
     searchHistoryList.push(city) 
-    localStorage.setItem(searchHistoryKey, searchHistoryList)
-
+    localStorage.setItem(searchHistoryKey, JSON.stringify (searchHistoryList))
+      
 }
 //Function to get forecast with coordinates
 function getForecast(coord) {
@@ -81,7 +84,7 @@ function renderForecast(info) {
 //Create a function to render five-day forecast. 
 function renderFiveDay(obj){
   console.log(obj)
-  //Create a four loop that loops over the daily array inside the object. 
+  //Create a for loop that loops over the daily array inside the object. 
   for(var i = 0; i < 5; i++){
     console.log(obj.daily[i].dt);
     var unixDate = obj.daily[i].dt;

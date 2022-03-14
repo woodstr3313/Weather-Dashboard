@@ -1,0 +1,11 @@
+header {
+    text-align: center;
+    color: white;
+}
+.jumbotron {
+    background-color: blue;
+}
+
+.todays-forecast {
+justify-content: center;
+}
