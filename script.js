@@ -6,6 +6,8 @@ var APIKey = "d9ec5726f4bacb7542a1b30a7c241e6e";
 var todaysForecast = document.getElementById("todays-forecast");
 var city;
 var fiveDay = document.getElementById("five-day") 
+var searchHistoryContainer = document.getElementById("search-history-container");
+var searchHistoryList;
 //Function for 1st api call to get geographic coordinates. **Read up on event.preventDefault
 function getCoordinates(event) {
   //Get user input
@@ -23,7 +25,7 @@ function getCoordinates(event) {
     });
 
     const searchHistoryKey = "searchHistory1";
-    var searchHistoryList = JSON.parse (localStorage.getItem(searchHistoryKey))
+    searchHistoryList = JSON.parse (localStorage.getItem(searchHistoryKey))
 
     if (!searchHistoryList){
       searchHistoryList = []
@@ -35,7 +37,31 @@ function getCoordinates(event) {
    
     searchHistoryList.push(city) 
     localStorage.setItem(searchHistoryKey, JSON.stringify (searchHistoryList))
-      
+    
+    searchHistoryResults(searchHistoryList) 
+
+}
+
+//TODO clean up any old elements. Run function to list list results
+function searchHistoryResults(searchHistoryList) {
+  searchHistoryList = JSON.parse (localStorage.getItem("searchHistory1"))
+  console.log(searchHistoryList);
+  // Clear out old elements 
+  searchHistoryContainer.innerHTML = ""
+  // Create a for loop to wrap each of our search items in our array
+  console.log(typeof searchHistoryList)
+  for (var i = 0; i < searchHistoryList.length; i++){
+    console.log(searchHistoryList[i]);
+    //Create a button element to wrap each item in the html
+    var historyButton = document.createElement("button");
+    // Research Classlist.add to add a class to the button element
+    historyButton.classList.add("history-button");
+    historyButton.innerText = searchHistoryList[i];
+    // historyButton.addEventListener("click",getCoordinates(historyButton.innerText))
+    searchHistoryContainer.appendChild(historyButton);
+
+
+  }
 }
 //Function to get forecast with coordinates
 function getForecast(coord) {
@@ -65,7 +91,7 @@ function renderForecast(info) {
   var windSpeed = info.current.wind_speed;
   var icon = info.current.weather[0].icon;
   console.log(uvi,humidity,windSpeed,icon);
-  
+  console.log(info);
 
   // Create template to inject date into. 
   var template = `
@@ -85,20 +111,39 @@ function renderForecast(info) {
 function renderFiveDay(obj){
   console.log(obj)
   //Create a for loop that loops over the daily array inside the object. 
-  for(var i = 0; i < 5; i++){
+  for(var i = 1; i < 6; i++){
     console.log(obj.daily[i].dt);
     var unixDate = obj.daily[i].dt;
   var dateObject = new Date(unixDate * 1000);
   var humanDate = dateObject.toLocaleString("en-US", {month: "long", day: "numeric", year:"numeric"});
-  console.log(humanDate)
-  // Create element in for loop and
+  var icon = obj.daily[i].weather[0].icon;
+  var temp = obj.daily[i].temp.max;
+  var humidity = obj.daily[i].humidity;
+  var wind = obj.daily[i].wind_speed;
+  console.log(icon,temp,humidity,wind);
+  var template = `
+  <h2>${humanDate} <img src="http://openweathermap.org/img/wn/${icon}@2x.png" alt="Weather Icon"></h2>
+  <p> temperature: ${temp} </p>
+  <p> wind: ${wind}MPH </p>
+  <p> humidity: ${humidity}% </p>
+
+`
+  // Create element for each day for the forecast
+  var card = document.createElement("div")
+  card.innerHTML = template
+  fiveDay.appendChild(card);
+
+
+
   }
 }
 
 //Add event listener for search button.
 btn.addEventListener("click", getCoordinates)
+searchHistoryResults(searchHistoryList);
 
 
+//TODO Fix city output so name generates after user search vs zipcode
 
 // //Search Var
 // var APIKey = "d9ec5726f4bacb7542a1b30a7c241e6e";
