@@ -14,15 +14,16 @@ function getCoordinates(event) {
   event.preventDefault();
   city = cityInput.value.trim()
   console.log(city)
-  fetch('http://api.openweathermap.org/data/2.5/weather?q='+city+'&appid='+APIKey, {
-    cache: 'reload',
-  })
-    .then(function (response) {
-      return response.json();
-    })
-    .then(function (data) {
-     getForecast(data);
-    });
+  apiCall(city);
+  // fetch('http://api.openweathermap.org/data/2.5/weather?q='+city+'&appid='+APIKey, {
+  //   cache: 'reload',
+  // })
+  //   .then(function (response) {
+  //     return response.json();
+  //   })
+  //   .then(function (data) {
+  //    getForecast(data);
+  //   });
 
     const searchHistoryKey = "searchHistory1";
     searchHistoryList = JSON.parse (localStorage.getItem(searchHistoryKey))
@@ -42,6 +43,19 @@ function getCoordinates(event) {
 
 }
 
+function apiCall (city) {
+  debugger
+  fetch('http://api.openweathermap.org/data/2.5/weather?q='+city+'&appid='+APIKey, {
+    cache: 'reload',
+  })
+    .then(function (response) {
+      return response.json();
+    })
+    .then(function (data) {
+     getForecast(data);
+    });
+}
+
 //TODO clean up any old elements. Run function to list list results
 function searchHistoryResults(searchHistoryList) {
   searchHistoryList = JSON.parse (localStorage.getItem("searchHistory1"))
@@ -57,10 +71,8 @@ function searchHistoryResults(searchHistoryList) {
     // Research Classlist.add to add a class to the button element
     historyButton.classList.add("history-button");
     historyButton.innerText = searchHistoryList[i];
-    // historyButton.addEventListener("click",getCoordinates(historyButton.innerText))
+    historyButton.addEventListener("click",(e)=>apiCall(historyButton.innerText))
     searchHistoryContainer.appendChild(historyButton);
-
-
   }
 }
 //Function to get forecast with coordinates
@@ -133,15 +145,27 @@ function renderFiveDay(obj){
   card.innerHTML = template
   fiveDay.appendChild(card);
 
-
-
   }
 }
+// Removing elements from DOM
+function deleteForecast(){
+  var fiveDay = document.getElementById("five-day")
+  fiveDay.remove();
+};
+// Appending new forecast to existing div tag in HTML
+function prepForNewForecast(){
+  document.getElementById("five-day-container")
+  var card = document.createElement("div")
+  card.innerHTML = template
+  fiveDay.appendChild(card);
+};
+// 
 
 //Add event listener for search button.
 btn.addEventListener("click", getCoordinates)
 searchHistoryResults(searchHistoryList);
 
+// kelvin math for 5 day forecast
 
 //TODO Fix city output so name generates after user search vs zipcode
 
