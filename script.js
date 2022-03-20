@@ -44,7 +44,6 @@ function getCoordinates(event) {
 }
 
 function apiCall (city) {
-  debugger
   fetch('http://api.openweathermap.org/data/2.5/weather?q='+city+'&appid='+APIKey, {
     cache: 'reload',
   })
@@ -96,7 +95,7 @@ function renderForecast(info) {
   var unixDate = info.current.dt;
   var dateObject = new Date(unixDate * 1000);
   var humanDate = dateObject.toLocaleString("en-US", {month: "long", day: "numeric", year:"numeric"});
-  var temp = Math.round((info.current.temp - 273.5) * 1.8 + 32)
+  var temp = Math.round((info.current.temp - 273.15) * 1.8 + 32)
   console.log(temp)
   var uvi = info.current.uvi;
   var humidity = info.current.humidity;
@@ -121,45 +120,32 @@ function renderForecast(info) {
 }
 //Create a function to render five-day forecast. 
 function renderFiveDay(obj){
-  console.log(obj)
+  fiveDay.innerHTML = "";
   //Create a for loop that loops over the daily array inside the object. 
-  for(var i = 1; i < 6; i++){
+  for(var i = 0; i < 5; i++){
+    console.log(fiveDay)
     console.log(obj.daily[i].dt);
     var unixDate = obj.daily[i].dt;
-  var dateObject = new Date(unixDate * 1000);
-  var humanDate = dateObject.toLocaleString("en-US", {month: "long", day: "numeric", year:"numeric"});
-  var icon = obj.daily[i].weather[0].icon;
-  var temp = obj.daily[i].temp.max;
-  var humidity = obj.daily[i].humidity;
-  var wind = obj.daily[i].wind_speed;
-  console.log(icon,temp,humidity,wind);
-  var template = `
-  <h2>${humanDate} <img src="http://openweathermap.org/img/wn/${icon}@2x.png" alt="Weather Icon"></h2>
-  <p> temperature: ${temp} </p>
-  <p> wind: ${wind}MPH </p>
-  <p> humidity: ${humidity}% </p>
-
-`
-  // Create element for each day for the forecast
-  var card = document.createElement("div")
-  card.innerHTML = template
-  fiveDay.appendChild(card);
-
+    var dateObject = new Date(unixDate * 1000);
+    var humanDate = dateObject.toLocaleString("en-US", {month: "long", day: "numeric", year:"numeric"});
+    var icon = obj.daily[i].weather[0].icon;
+    var temp = Math.round ((obj.daily[i].temp.day - 273.15) * 1.8 + 32);
+    var humidity = obj.daily[i].humidity;
+    var wind = obj.daily[i].wind_speed;
+    console.log(icon,temp,humidity,wind);
+    var template = `
+      <h2>${humanDate} <img src="http://openweathermap.org/img/wn/${icon}@2x.png" alt="Weather Icon"></h2>
+      <p> temperature: ${temp} </p>
+      <p> wind: ${wind}MPH </p>
+      <p> humidity: ${humidity}% </p>
+    `
+    // Create element for each day for the forecast
+    var card = document.createElement("div")
+    card.innerHTML = template
+    fiveDay.appendChild(card);
   }
 }
-// Removing elements from DOM
-function deleteForecast(){
-  var fiveDay = document.getElementById("five-day")
-  fiveDay.remove();
-};
-// Appending new forecast to existing div tag in HTML
-function prepForNewForecast(){
-  document.getElementById("five-day-container")
-  var card = document.createElement("div")
-  card.innerHTML = template
-  fiveDay.appendChild(card);
-};
-// 
+
 
 //Add event listener for search button.
 btn.addEventListener("click", getCoordinates)
