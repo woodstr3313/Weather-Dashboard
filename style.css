@@ -1,3 +1,8 @@
+* {
+    margin: 0;
+    padding: 0;
+}
+
 header {
     text-align: center;
     color: white;
@@ -5,14 +10,57 @@ header {
 .jumbotron {
     background-color: blue;
 }
+.container {
+   display: flex;
 
-.todays-forecast {
-justify-content: center;
+}
+.forecast {
+display: inline;
+max-width: 65%;
+margin-left: 10px;
 }
 
-.five-day-container {
+#todays-forecast {
+justify-content: right;
+text-align: end;
+box-sizing: border-box;
+box-shadow: inset;
+flex-basis: 100%;
+border: 2px solid blue;
+margin-bottom: 5px;
+}
+
+#five-day-container {
     margin: auto;
-    width: 50%;
     border: 3px solid blue;
     padding: 10px;
+    display: flex;
 }
+.future {
+    flex-basis: 19%;
+}
+aside {
+    text-align: left;
+    color: black;
+    font-style: bold;
+    max-width: 33%;
+    display: inline;
+    border: 2px solid blue;
+    padding: 5px;
+}
+
+button {
+    padding:10px;
+    min-width: 75px;
+    margin-bottom: 5px;
+
+}
+.history-button {
+    display: block;
+
+}
+
+.hide {
+    display: none;
+}
+

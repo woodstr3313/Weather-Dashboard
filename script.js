@@ -5,7 +5,7 @@ var btn = document.getElementById("search-button");
 var APIKey = "d9ec5726f4bacb7542a1b30a7c241e6e";
 var todaysForecast = document.getElementById("todays-forecast");
 var city;
-var fiveDay = document.getElementById("five-day");
+var fiveDay = document.getElementById("five-day-container");
 var searchHistoryContainer = document.getElementById(
   "search-history-container"
 );
@@ -136,7 +136,7 @@ function renderForecast(info) {
 function renderFiveDay(obj) {
   fiveDay.innerHTML = "";
   //Create a for loop that loops over the daily array inside the object.
-  for (var i = 0; i < 5; i++) {
+  for (var i = 1; i < 6; i++) {
     console.log(fiveDay);
     console.log(obj.daily[i].dt);
     var unixDate = obj.daily[i].dt;
@@ -159,6 +159,7 @@ function renderFiveDay(obj) {
     `;
     // Create element for each day for the forecast
     var card = document.createElement("div");
+    card.classList.add("future");
     card.innerHTML = template;
     fiveDay.appendChild(card);
   }
