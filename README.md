@@ -4,5 +4,5 @@ This application was created for users to search for current and upcoming weathe
 
 -Travis Woods
 
-![imagelink](images/Weather-Dashboard.png
+![imagelink](./images/Weather-Dashboard.png)
 The site is published at https://woodstr3313.github.io/Weather-Dashboard/
