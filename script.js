@@ -90,6 +90,14 @@ async function fetchWeather(query, shouldPersist) {
 }
 
 async function fetchZipWeather(zipCode) {
+  try {
+    return await fetchZipWeatherDirect(zipCode);
+  } catch (directError) {
+    return fetchZipWeatherByGeocode(zipCode, directError);
+  }
+}
+
+async function fetchZipWeatherDirect(zipCode) {
   const zipParam = `${zipCode},US`;
   const [currentResponse, forecastResponse] = await Promise.all([
     fetch(`https://api.openweathermap.org/data/2.5/weather?zip=${encodeURIComponent(zipParam)}&units=imperial&appid=${API_KEY}`),
@@ -97,8 +105,47 @@ async function fetchZipWeather(zipCode) {
   ]);
 
   if (currentResponse.status === 404 || forecastResponse.status === 404) {
+    throw new Error("That ZIP code was not found through the direct ZIP lookup.");
+  }
+
+  if (!currentResponse.ok || !forecastResponse.ok) {
+    throw new Error("Direct ZIP forecast lookup failed.");
+  }
+
+  const [currentData, forecastData] = await Promise.all([
+    currentResponse.json(),
+    forecastResponse.json()
+  ]);
+
+  return {
+    currentData,
+    forecastData,
+    displayQuery: zipCode
+  };
+}
+
+async function fetchZipWeatherByGeocode(zipCode, originalError) {
+  const geoResponse = await fetch(
+    `https://api.openweathermap.org/geo/1.0/zip?zip=${encodeURIComponent(`${zipCode},US`)}&appid=${API_KEY}`
+  );
+
+  if (geoResponse.status === 404) {
     throw new Error("That ZIP code was not found. Try another U.S. ZIP code.");
   }
+
+  if (!geoResponse.ok) {
+    throw new Error(originalError?.message || "Unable to load weather for that ZIP code right now.");
+  }
+
+  const geoData = await geoResponse.json();
+  const [currentResponse, forecastResponse] = await Promise.all([
+    fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${geoData.lat}&lon=${geoData.lon}&units=imperial&appid=${API_KEY}`
+    ),
+    fetch(
+      `https://api.openweathermap.org/data/2.5/forecast?lat=${geoData.lat}&lon=${geoData.lon}&units=imperial&appid=${API_KEY}`
+    )
+  ]);
 
   if (!currentResponse.ok || !forecastResponse.ok) {
     throw new Error("Unable to load weather for that ZIP code right now.");
