@@ -1,4 +1,4 @@
-const API_KEY = "d9ec5726f4bacb7542a1b30a7c241e6e";
+const API_KEY = "881aca9dcdaceafd8f675424ed16a3fc";
 const STORAGE_KEY = "weather-dashboard-history";
 const MAX_HISTORY_ITEMS = 8;
 const ZIP_CODE_PATTERN = /^\d{5}(?:-\d{4})?$/;
@@ -28,7 +28,7 @@ initializeDashboard();
 
 function initializeDashboard() {
   renderSearchHistory();
-  buildWeatherScene("clear");
+  buildWeatherScene("clear", true);
 
   const history = getSearchHistory();
   if (history.length) {
@@ -50,53 +50,33 @@ async function handleSearchSubmit(event) {
 
 async function handleHistoryClick(event) {
   const button = event.target.closest("button[data-city]");
-  if (!button) {
-    return;
-  }
-
-  const query = button.dataset.city;
-  await fetchWeather(query, false);
+  if (!button) return;
+  await fetchWeather(button.dataset.city, false);
 }
 
 async function fetchWeather(query, shouldPersist) {
+  const normalizedQuery = query.trim();
   setLoadingState(true);
-  setStatus(`Loading weather for ${query}...`);
+  setStatus(`Loading weather for ${normalizedQuery}...`);
 
   try {
-    const normalizedQuery = query.trim();
-    const location = ZIP_CODE_PATTERN.test(normalizedQuery)
-      ? await fetchByZipCode(normalizedQuery)
-      : await fetchByCity(normalizedQuery);
+    const isZipCode = ZIP_CODE_PATTERN.test(normalizedQuery);
+    const { currentData, forecastData, displayQuery } = isZipCode
+      ? await fetchZipWeather(normalizedQuery)
+      : await fetchCityWeather(normalizedQuery);
 
-    currentLocationName = `${location.city}, ${location.country}`;
-
-    const [currentResponse, forecastResponse] = await Promise.all([
-      fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&units=imperial&appid=${API_KEY}`
-      ),
-      fetch(
-        `https://api.openweathermap.org/data/2.5/forecast?lat=${location.lat}&lon=${location.lon}&units=imperial&appid=${API_KEY}`
-      )
-    ]);
-
-    if (!currentResponse.ok || !forecastResponse.ok) {
-      throw new Error("Unable to load the forecast right now.");
-    }
-
-    const [currentData, forecastData] = await Promise.all([
-      currentResponse.json(),
-      forecastResponse.json()
-    ]);
+    currentLocationName = `${currentData.name}, ${currentData.sys.country}`;
 
     const weatherType = normalizeWeatherType(currentData.weather?.[0]?.main || "Clear");
+    const isDaytime = computeIsDaytime(currentData);
 
-    renderCurrentWeather(currentData);
+    renderCurrentWeather(currentData, weatherType);
     renderHourlyForecast(forecastData.list.slice(0, 6));
     renderFiveDayForecast(forecastData);
-    buildWeatherScene(weatherType);
+    buildWeatherScene(weatherType, isDaytime);
 
     if (shouldPersist) {
-      saveSearch(normalizedQuery);
+      saveSearch(displayQuery);
     }
 
     cityInput.value = "";
@@ -108,59 +88,95 @@ async function fetchWeather(query, shouldPersist) {
   }
 }
 
-async function fetchByZipCode(zipCode) {
-  const response = await fetch(
-    `https://api.openweathermap.org/geo/1.0/zip?zip=${encodeURIComponent(zipCode)},US&appid=${API_KEY}`
-  );
+async function fetchZipWeather(zipCode) {
+  try {
+    return await fetchZipWeatherDirect(zipCode);
+  } catch {
+    return fetchZipWeatherByGeocode(zipCode);
+  }
+}
 
-  if (!response.ok) {
+async function fetchZipWeatherDirect(zipCode) {
+  const zipParam = `${zipCode},US`;
+  const [currentResponse, forecastResponse] = await Promise.all([
+    fetch(`https://api.openweathermap.org/data/2.5/weather?zip=${encodeURIComponent(zipParam)}&units=imperial&appid=${API_KEY}`),
+    fetch(`https://api.openweathermap.org/data/2.5/forecast?zip=${encodeURIComponent(zipParam)}&units=imperial&appid=${API_KEY}`)
+  ]);
+
+  if (currentResponse.status === 404 || forecastResponse.status === 404) {
+    throw new Error("That ZIP code was not found.");
+  }
+
+  if (!currentResponse.ok || !forecastResponse.ok) {
+    throw new Error("Direct ZIP forecast lookup failed.");
+  }
+
+  const [currentData, forecastData] = await Promise.all([currentResponse.json(), forecastResponse.json()]);
+  return { currentData, forecastData, displayQuery: zipCode };
+}
+
+async function fetchZipWeatherByGeocode(zipCode) {
+  const geoResponse = await fetch(`https://api.openweathermap.org/geo/1.0/zip?zip=${encodeURIComponent(`${zipCode},US`)}&appid=${API_KEY}`);
+
+  if (geoResponse.status === 404) {
     throw new Error("That ZIP code was not found. Try another U.S. ZIP code.");
   }
 
-  const data = await response.json();
-  return {
-    city: data.name,
-    country: data.country,
-    lat: data.lat,
-    lon: data.lon
-  };
+  if (!geoResponse.ok) {
+    throw new Error("Unable to load weather for that ZIP code right now.");
+  }
+
+  const geoData = await geoResponse.json();
+  const [currentResponse, forecastResponse] = await Promise.all([
+    fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${geoData.lat}&lon=${geoData.lon}&units=imperial&appid=${API_KEY}`),
+    fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${geoData.lat}&lon=${geoData.lon}&units=imperial&appid=${API_KEY}`)
+  ]);
+
+  if (!currentResponse.ok || !forecastResponse.ok) {
+    throw new Error("Unable to load weather for that ZIP code right now.");
+  }
+
+  const [currentData, forecastData] = await Promise.all([currentResponse.json(), forecastResponse.json()]);
+  return { currentData, forecastData, displayQuery: zipCode };
 }
 
-async function fetchByCity(city) {
-  const response = await fetch(
-    `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)},US&limit=1&appid=${API_KEY}`
-  );
+async function fetchCityWeather(city) {
+  const geoResponse = await fetch(`https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)},US&limit=1&appid=${API_KEY}`);
 
-  if (!response.ok) {
+  if (!geoResponse.ok) {
     throw new Error("Unable to search for that city right now.");
   }
 
-  const results = await response.json();
-  const match = results?.[0];
-
+  const geoResults = await geoResponse.json();
+  const match = geoResults?.[0];
   if (!match) {
     throw new Error("That city was not found. Try a U.S. city name or ZIP code.");
   }
 
-  return {
-    city: match.name,
-    country: match.country,
-    lat: match.lat,
-    lon: match.lon
-  };
+  const [currentResponse, forecastResponse] = await Promise.all([
+    fetch(`https://api.openweathermap.org/data/2.5/weather?lat=${match.lat}&lon=${match.lon}&units=imperial&appid=${API_KEY}`),
+    fetch(`https://api.openweathermap.org/data/2.5/forecast?lat=${match.lat}&lon=${match.lon}&units=imperial&appid=${API_KEY}`)
+  ]);
+
+  if (!currentResponse.ok || !forecastResponse.ok) {
+    throw new Error("Unable to load the forecast right now.");
+  }
+
+  const [currentData, forecastData] = await Promise.all([currentResponse.json(), forecastResponse.json()]);
+  return { currentData, forecastData, displayQuery: match.name };
 }
 
-function renderCurrentWeather(data) {
+function renderCurrentWeather(data, weatherType) {
   emptyState.classList.add("hidden");
   todaysForecast.classList.remove("hidden");
 
   const icon = data.weather?.[0]?.icon || "01d";
   const description = toTitleCase(data.weather?.[0]?.description || "Current conditions");
-  const weatherType = normalizeWeatherType(data.weather?.[0]?.main || "Clear");
   const high = data.main.temp_max;
   const low = data.main.temp_min;
   const sunrise = formatTime(data.sys.sunrise, data.timezone);
   const sunset = formatTime(data.sys.sunset, data.timezone);
+  const conditionClass = `condition-${weatherType}`;
 
   todaysForecast.innerHTML = `
     <div class="current-top">
@@ -172,7 +188,7 @@ function renderCurrentWeather(data) {
         <p class="current-subtitle">${formatLongDate(new Date())} • ${description}</p>
       </div>
       <div class="current-summary">
-        <div class="current-icon-wrap">
+        <div class="current-icon-wrap ${conditionClass}">
           <img src="https://openweathermap.org/img/wn/${icon}@4x.png" alt="${description}" />
         </div>
         <div class="temperature-block">
@@ -181,87 +197,57 @@ function renderCurrentWeather(data) {
         </div>
       </div>
     </div>
-
     <div class="metric-grid">
-      <article class="metric-card">
-        <span class="metric-label">Feels Like</span>
-        <p class="metric-value">${Math.round(data.main.feels_like)}°F</p>
-      </article>
-      <article class="metric-card">
-        <span class="metric-label">Humidity</span>
-        <p class="metric-value">${data.main.humidity}%</p>
-      </article>
-      <article class="metric-card">
-        <span class="metric-label">Wind</span>
-        <p class="metric-value">${Math.round(data.wind.speed)} mph</p>
-      </article>
-      <article class="metric-card">
-        <span class="metric-label">Pressure</span>
-        <p class="metric-value">${data.main.pressure} hPa</p>
-      </article>
-      <article class="metric-card">
-        <span class="metric-label">Sunrise</span>
-        <p class="metric-value">${sunrise}</p>
-      </article>
-      <article class="metric-card">
-        <span class="metric-label">Sunset</span>
-        <p class="metric-value">${sunset}</p>
-      </article>
+      <article class="metric-card"><span class="metric-label">Feels Like</span><p class="metric-value">${Math.round(data.main.feels_like)}°F</p></article>
+      <article class="metric-card"><span class="metric-label">Humidity</span><p class="metric-value">${data.main.humidity}%</p></article>
+      <article class="metric-card"><span class="metric-label">Wind</span><p class="metric-value">${Math.round(data.wind.speed)} mph</p></article>
+      <article class="metric-card"><span class="metric-label">Pressure</span><p class="metric-value">${data.main.pressure} hPa</p></article>
+      <article class="metric-card"><span class="metric-label">Sunrise</span><p class="metric-value">${sunrise}</p></article>
+      <article class="metric-card"><span class="metric-label">Sunset</span><p class="metric-value">${sunset}</p></article>
     </div>
   `;
 }
 
 function renderHourlyForecast(hourlyEntries) {
   hourlySection.classList.remove("hidden");
-
-  hourlyContainer.innerHTML = hourlyEntries
-    .map((entry) => {
-      const icon = entry.weather?.[0]?.icon || "01d";
-      const label = toTitleCase(entry.weather?.[0]?.main || "Clear");
-
-      return `
-        <article class="hourly-card">
-          <p class="hourly-time">${formatHour(new Date(entry.dt * 1000))}</p>
-          <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${label}" />
-          <p class="hourly-temp">${Math.round(entry.main.temp)}°</p>
-          <p class="hourly-label">${label}</p>
-        </article>
-      `;
-    })
-    .join("");
+  hourlyContainer.innerHTML = hourlyEntries.map((entry) => {
+    const icon = entry.weather?.[0]?.icon || "01d";
+    const label = toTitleCase(entry.weather?.[0]?.main || "Clear");
+    return `
+      <article class="hourly-card">
+        <p class="hourly-time">${formatHour(new Date(entry.dt * 1000))}</p>
+        <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${label}" />
+        <p class="hourly-temp">${Math.round(entry.main.temp)}°</p>
+        <p class="hourly-label">${label}</p>
+      </article>
+    `;
+  }).join("");
 }
 
 function renderFiveDayForecast(forecastData) {
   fiveDaySection.classList.remove("hidden");
-
-  const dailyForecasts = forecastData.list
-    .filter((entry) => entry.dt_txt.includes("12:00:00"))
-    .slice(0, 5);
-
+  const dailyForecasts = forecastData.list.filter((entry) => entry.dt_txt.includes("12:00:00")).slice(0, 5);
   if (!dailyForecasts.length) {
     fiveDayContainer.innerHTML = '<p class="current-subtitle">Forecast data is temporarily unavailable.</p>';
     return;
   }
 
-  fiveDayContainer.innerHTML = dailyForecasts
-    .map((entry) => {
-      const icon = entry.weather?.[0]?.icon || "01d";
-      const description = toTitleCase(entry.weather?.[0]?.description || "Forecast");
-      const date = new Date(entry.dt * 1000);
-
-      return `
-        <article class="forecast-card">
-          <h3 class="forecast-day">${formatShortDay(date)}</h3>
-          <p class="forecast-meta">${formatShortDate(date)}</p>
-          <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${description}" />
-          <div class="forecast-range"><span>High</span><strong>${Math.round(entry.main.temp_max)}°F</strong></div>
-          <div class="forecast-range"><span>Low</span><strong>${Math.round(entry.main.temp_min)}°F</strong></div>
-          <div class="forecast-detail"><span>Wind</span><strong>${Math.round(entry.wind.speed)} mph</strong></div>
-          <div class="forecast-detail"><span>Humidity</span><strong>${entry.main.humidity}%</strong></div>
-        </article>
-      `;
-    })
-    .join("");
+  fiveDayContainer.innerHTML = dailyForecasts.map((entry) => {
+    const icon = entry.weather?.[0]?.icon || "01d";
+    const description = toTitleCase(entry.weather?.[0]?.description || "Forecast");
+    const date = new Date(entry.dt * 1000);
+    return `
+      <article class="forecast-card">
+        <h3 class="forecast-day">${formatShortDay(date)}</h3>
+        <p class="forecast-meta">${formatShortDate(date)}</p>
+        <img src="https://openweathermap.org/img/wn/${icon}@2x.png" alt="${description}" />
+        <div class="forecast-range"><span>High</span><strong>${Math.round(entry.main.temp_max)}°F</strong></div>
+        <div class="forecast-range"><span>Low</span><strong>${Math.round(entry.main.temp_min)}°F</strong></div>
+        <div class="forecast-detail"><span>Wind</span><strong>${Math.round(entry.wind.speed)} mph</strong></div>
+        <div class="forecast-detail"><span>Humidity</span><strong>${entry.main.humidity}%</strong></div>
+      </article>
+    `;
+  }).join("");
 }
 
 function saveSearch(query) {
@@ -278,18 +264,12 @@ function getSearchHistory() {
 
 function renderSearchHistory() {
   const history = getSearchHistory();
-
   if (!history.length) {
     searchHistoryContainer.innerHTML = '<p>Your recent searches will appear here.</p>';
     return;
   }
 
-  searchHistoryContainer.innerHTML = history
-    .map(
-      (item) =>
-        `<button type="button" class="history-button" data-city="${escapeHtml(item)}">${escapeHtml(item)}</button>`
-    )
-    .join("");
+  searchHistoryContainer.innerHTML = history.map((item) => `<button type="button" class="history-button" data-city="${escapeHtml(item)}">${escapeHtml(item)}</button>`).join("");
 }
 
 function clearHistory() {
@@ -308,8 +288,9 @@ function setStatus(message, isError = false) {
   statusMessage.style.color = isError ? "#fecdd3" : "";
 }
 
-function buildWeatherScene(weatherType) {
+function buildWeatherScene(weatherType, isDaytime) {
   document.body.dataset.weather = weatherType;
+  document.body.dataset.daytime = isDaytime ? "day" : "night";
   particleContainer.innerHTML = "";
 
   const config = getParticleConfig(weatherType);
@@ -320,12 +301,10 @@ function buildWeatherScene(weatherType) {
     particle.style.animationDuration = `${config.minDuration + Math.random() * config.durationSpread}s`;
     particle.style.animationDelay = `${Math.random() * config.delaySpread}s`;
     particle.style.opacity = `${config.baseOpacity}`;
-
     if (config.type === "cloud") {
       particle.style.top = `${5 + Math.random() * 55}%`;
       particle.style.transform = `scale(${0.7 + Math.random() * 0.7})`;
     }
-
     particleContainer.appendChild(particle);
   }
 }
@@ -336,14 +315,14 @@ function getParticleConfig(weatherType) {
     case "drizzle":
       return { count: 55, minDuration: 1.6, durationSpread: 1.8, delaySpread: 3, baseOpacity: 0.7, type: "rain" };
     case "thunderstorm":
-      return { count: 70, minDuration: 1.1, durationSpread: 1.2, delaySpread: 2, baseOpacity: 0.9, type: "rain" };
+      return { count: 80, minDuration: 1.05, durationSpread: 1.1, delaySpread: 2, baseOpacity: 0.95, type: "rain" };
     case "snow":
       return { count: 42, minDuration: 6, durationSpread: 4, delaySpread: 6, baseOpacity: 0.95, type: "snow" };
     case "clouds":
     case "mist":
     case "fog":
     case "haze":
-      return { count: 9, minDuration: 18, durationSpread: 10, delaySpread: 18, baseOpacity: 0.32, type: "cloud" };
+      return { count: 10, minDuration: 18, durationSpread: 10, delaySpread: 18, baseOpacity: 0.32, type: "cloud" };
     default:
       return { count: 7, minDuration: 20, durationSpread: 12, delaySpread: 18, baseOpacity: 0.22, type: "cloud" };
   }
@@ -359,7 +338,6 @@ function initializeTiltSurfaces() {
       const rotateX = ((y / rect.height) - 0.5) * -8;
       surface.style.transform = `perspective(1200px) rotateX(${rotateX}deg) rotateY(${rotateY}deg) translateY(-2px)`;
     });
-
     surface.addEventListener("mouseleave", () => {
       surface.style.transform = "perspective(1200px) rotateX(0deg) rotateY(0deg) translateY(0px)";
     });
@@ -368,7 +346,6 @@ function initializeTiltSurfaces() {
 
 function normalizeWeatherType(value) {
   const normalized = value.toLowerCase();
-
   if (normalized.includes("thunder")) return "thunderstorm";
   if (normalized.includes("drizzle")) return "drizzle";
   if (normalized.includes("rain")) return "rain";
@@ -384,13 +361,12 @@ function prettyWeatherLabel(value) {
   return value === "clear" ? "Clear Skies" : toTitleCase(value);
 }
 
+function computeIsDaytime(data) {
+  return data.dt >= data.sys.sunrise && data.dt <= data.sys.sunset;
+}
+
 function formatLongDate(date) {
-  return new Intl.DateTimeFormat("en-US", {
-    weekday: "long",
-    month: "long",
-    day: "numeric",
-    year: "numeric"
-  }).format(date);
+  return new Intl.DateTimeFormat("en-US", { weekday: "long", month: "long", day: "numeric", year: "numeric" }).format(date);
 }
 
 function formatShortDay(date) {
@@ -398,27 +374,16 @@ function formatShortDay(date) {
 }
 
 function formatShortDate(date) {
-  return new Intl.DateTimeFormat("en-US", {
-    month: "short",
-    day: "numeric"
-  }).format(date);
+  return new Intl.DateTimeFormat("en-US", { month: "short", day: "numeric" }).format(date);
 }
 
 function formatHour(date) {
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    hour12: true
-  }).format(date);
+  return new Intl.DateTimeFormat("en-US", { hour: "numeric", hour12: true }).format(date);
 }
 
 function formatTime(unixTimestamp, timezoneOffsetSeconds) {
   const localTime = new Date((unixTimestamp + timezoneOffsetSeconds) * 1000);
-  return new Intl.DateTimeFormat("en-US", {
-    hour: "numeric",
-    minute: "2-digit",
-    hour12: true,
-    timeZone: "UTC"
-  }).format(localTime);
+  return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", hour12: true, timeZone: "UTC" }).format(localTime);
 }
 
 function toTitleCase(value) {
@@ -426,10 +391,5 @@ function toTitleCase(value) {
 }
 
 function escapeHtml(value) {
-  return value
-    .replaceAll("&", "&amp;")
-    .replaceAll("<", "&lt;")
-    .replaceAll(">", "&gt;")
-    .replaceAll('"', "&quot;")
-    .replaceAll("'", "&#39;");
+  return value.replaceAll("&", "&amp;").replaceAll("<", "&lt;").replaceAll(">", "&gt;").replaceAll('"', "&quot;").replaceAll("'", "&#39;");
 }
