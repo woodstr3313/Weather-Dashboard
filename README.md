@@ -1,16 +1,19 @@
 # Weather Dashboard
 
-A redesigned weather dashboard with a more polished, Apple-inspired feel, support for U.S. city and ZIP code searches, and a reactive animated weather scene.
+An Apple-inspired weather dashboard with U.S. city and ZIP search, animated day and night scenes, hourly preview cards, and a polished five day outlook.
+
+## App preview
+
+![Weather Dashboard preview](./images/app-preview.png)
 
 ## What changed
 
-- rebuilt the interface into a more premium glassmorphism layout
-- added support for U.S. ZIP code searches alongside city searches
-- added a dynamic background scene that changes with current weather conditions
-- added lightweight animated weather particles for clear, cloudy, rainy, snowy, and misty conditions
-- added an hourly preview section and improved the five day forecast presentation
-- added a favicon and refreshed the project structure
-- kept the app as a no-build static site so it still runs easily with GitHub Pages or a local server
+- removed the redundant hero chips on the right so the landing area stays cleaner
+- improved ZIP search reliability with direct ZIP lookup plus geocode fallback
+- added cinematic weather scenes with day and night awareness
+- added stronger storm treatment with lightning flash effects
+- improved the current conditions presentation and icon treatment
+- kept the app as a no-build static site for easy local testing and GitHub Pages deployment
 
 ## Features
 
@@ -25,10 +28,10 @@ A redesigned weather dashboard with a more polished, Apple-inspired feel, suppor
 ## Local development
 
 ```bash
-python3 -m http.server 8000
+python3 -m http.server 8082
 ```
 
-Then open `http://localhost:8000`.
+Then open `http://localhost:8082`.
 
 ## Tech
 
@@ -39,7 +42,7 @@ Then open `http://localhost:8000`.
 
 ## Notes
 
-This version still uses a client-side API key because the app is deployed as a static site. To fully secure the API key, the next step would be moving requests behind a small serverless proxy on a platform like Vercel, Netlify, or Cloudflare.
+This version still uses a client-side API key because the app is deployed as a static site. The next production step would be moving weather requests behind a small serverless proxy on a platform like Vercel, Netlify, or Cloudflare.
 
 ## Live site
 
