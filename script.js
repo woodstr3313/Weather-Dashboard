@@ -1,4 +1,4 @@
-const API_KEY = "d9ec5726f4bacb7542a1b30a7c241e6e";
+const API_KEY = "881aca9dcdaceafd8f675424ed16a3fc";
 const STORAGE_KEY = "weather-dashboard-history";
 const MAX_HISTORY_ITEMS = 8;
 const ZIP_CODE_PATTERN = /^\d{5}(?:-\d{4})?$/;
