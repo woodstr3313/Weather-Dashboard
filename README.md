@@ -1,8 +1,30 @@
-# Weather-Dashboard
+# Weather Dashboard
 
-This application was created for users to search for current and upcoming weather conditions using a third party API. When the user searches for weather they will be presented with a daily result with the date, an icon showing weather conditions, the current temperature, the wind speed and the UV index. A five day forecast will also display on the site below the daily showing the icon for the weather condtions, the temperature, wind speed, and the humidity for the days. When the user searches for cities or by zip codes buttons will be generated that will allow the user to click and be take to previous search history results.
+A refreshed version of the original weather dashboard with a cleaner interface, better responsiveness, and sturdier client-side logic.
 
--Travis Woods
+## What changed
 
-![imagelink](./images/Weather-Dashboard.png)
-The site is published at https://woodstr3313.github.io/Weather-Dashboard/
+- Reworked the layout into a modern dashboard with a cleaner visual hierarchy
+- Removed duplicate library loading and dropped the old jQuery dependency entirely
+- Switched weather icon requests to `https` to avoid mixed-content issues
+- Added loading states, empty states, and clearer error handling
+- Improved search history behavior with deduping and a clear-history action
+- Rebuilt the forecast rendering to be more readable on desktop and mobile
+
+## Features
+
+- Search by city or ZIP code
+- View current conditions including temperature, feels like, humidity, wind, and sunrise/sunset
+- View a 5 day forecast
+- Store recent searches in local storage
+
+## Tech
+
+- HTML
+- CSS
+- Vanilla JavaScript
+- OpenWeather API
+
+## Live site
+
+Published at: https://woodstr3313.github.io/Weather-Dashboard/
