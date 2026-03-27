@@ -1,0 +1,15 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64" role="img" aria-label="Weather Dashboard icon">
+  <defs>
+    <linearGradient id="bg" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#0b2447" />
+      <stop offset="100%" stop-color="#0f6cbd" />
+    </linearGradient>
+    <linearGradient id="sun" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0%" stop-color="#fde68a" />
+      <stop offset="100%" stop-color="#f59e0b" />
+    </linearGradient>
+  </defs>
+  <rect width="64" height="64" rx="18" fill="url(#bg)" />
+  <circle cx="23" cy="24" r="10" fill="url(#sun)" />
+  <path d="M22 42c0-5.523 4.477-10 10-10 4.166 0 7.737 2.55 9.252 6.173A8 8 0 1 1 42 54H24a8 8 0 0 1-2-15.754Z" fill="#e0f2fe" fill-opacity="0.95" />
+</svg>
