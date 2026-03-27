@@ -54,49 +54,30 @@ async function handleHistoryClick(event) {
     return;
   }
 
-  const query = button.dataset.city;
-  await fetchWeather(query, false);
+  await fetchWeather(button.dataset.city, false);
 }
 
 async function fetchWeather(query, shouldPersist) {
+  const normalizedQuery = query.trim();
   setLoadingState(true);
-  setStatus(`Loading weather for ${query}...`);
+  setStatus(`Loading weather for ${normalizedQuery}...`);
 
   try {
-    const normalizedQuery = query.trim();
-    const location = ZIP_CODE_PATTERN.test(normalizedQuery)
-      ? await fetchByZipCode(normalizedQuery)
-      : await fetchByCity(normalizedQuery);
+    const isZipCode = ZIP_CODE_PATTERN.test(normalizedQuery);
+    const { currentData, forecastData, displayQuery } = isZipCode
+      ? await fetchZipWeather(normalizedQuery)
+      : await fetchCityWeather(normalizedQuery);
 
-    currentLocationName = `${location.city}, ${location.country}`;
-
-    const [currentResponse, forecastResponse] = await Promise.all([
-      fetch(
-        `https://api.openweathermap.org/data/2.5/weather?lat=${location.lat}&lon=${location.lon}&units=imperial&appid=${API_KEY}`
-      ),
-      fetch(
-        `https://api.openweathermap.org/data/2.5/forecast?lat=${location.lat}&lon=${location.lon}&units=imperial&appid=${API_KEY}`
-      )
-    ]);
-
-    if (!currentResponse.ok || !forecastResponse.ok) {
-      throw new Error("Unable to load the forecast right now.");
-    }
-
-    const [currentData, forecastData] = await Promise.all([
-      currentResponse.json(),
-      forecastResponse.json()
-    ]);
+    currentLocationName = `${currentData.name}, ${currentData.sys.country}`;
 
     const weatherType = normalizeWeatherType(currentData.weather?.[0]?.main || "Clear");
-
     renderCurrentWeather(currentData);
     renderHourlyForecast(forecastData.list.slice(0, 6));
     renderFiveDayForecast(forecastData);
     buildWeatherScene(weatherType);
 
     if (shouldPersist) {
-      saveSearch(normalizedQuery);
+      saveSearch(displayQuery);
     }
 
     cityInput.value = "";
@@ -108,45 +89,71 @@ async function fetchWeather(query, shouldPersist) {
   }
 }
 
-async function fetchByZipCode(zipCode) {
-  const response = await fetch(
-    `https://api.openweathermap.org/geo/1.0/zip?zip=${encodeURIComponent(zipCode)},US&appid=${API_KEY}`
-  );
+async function fetchZipWeather(zipCode) {
+  const zipParam = `${zipCode},US`;
+  const [currentResponse, forecastResponse] = await Promise.all([
+    fetch(`https://api.openweathermap.org/data/2.5/weather?zip=${encodeURIComponent(zipParam)}&units=imperial&appid=${API_KEY}`),
+    fetch(`https://api.openweathermap.org/data/2.5/forecast?zip=${encodeURIComponent(zipParam)}&units=imperial&appid=${API_KEY}`)
+  ]);
 
-  if (!response.ok) {
+  if (currentResponse.status === 404 || forecastResponse.status === 404) {
     throw new Error("That ZIP code was not found. Try another U.S. ZIP code.");
   }
 
-  const data = await response.json();
+  if (!currentResponse.ok || !forecastResponse.ok) {
+    throw new Error("Unable to load weather for that ZIP code right now.");
+  }
+
+  const [currentData, forecastData] = await Promise.all([
+    currentResponse.json(),
+    forecastResponse.json()
+  ]);
+
   return {
-    city: data.name,
-    country: data.country,
-    lat: data.lat,
-    lon: data.lon
+    currentData,
+    forecastData,
+    displayQuery: zipCode
   };
 }
 
-async function fetchByCity(city) {
-  const response = await fetch(
+async function fetchCityWeather(city) {
+  const geoResponse = await fetch(
     `https://api.openweathermap.org/geo/1.0/direct?q=${encodeURIComponent(city)},US&limit=1&appid=${API_KEY}`
   );
 
-  if (!response.ok) {
+  if (!geoResponse.ok) {
     throw new Error("Unable to search for that city right now.");
   }
 
-  const results = await response.json();
-  const match = results?.[0];
+  const geoResults = await geoResponse.json();
+  const match = geoResults?.[0];
 
   if (!match) {
     throw new Error("That city was not found. Try a U.S. city name or ZIP code.");
   }
 
+  const [currentResponse, forecastResponse] = await Promise.all([
+    fetch(
+      `https://api.openweathermap.org/data/2.5/weather?lat=${match.lat}&lon=${match.lon}&units=imperial&appid=${API_KEY}`
+    ),
+    fetch(
+      `https://api.openweathermap.org/data/2.5/forecast?lat=${match.lat}&lon=${match.lon}&units=imperial&appid=${API_KEY}`
+    )
+  ]);
+
+  if (!currentResponse.ok || !forecastResponse.ok) {
+    throw new Error("Unable to load the forecast right now.");
+  }
+
+  const [currentData, forecastData] = await Promise.all([
+    currentResponse.json(),
+    forecastResponse.json()
+  ]);
+
   return {
-    city: match.name,
-    country: match.country,
-    lat: match.lat,
-    lon: match.lon
+    currentData,
+    forecastData,
+    displayQuery: match.name
   };
 }
 
