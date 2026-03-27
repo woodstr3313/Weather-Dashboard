@@ -1,126 +1,64 @@
 <!DOCTYPE html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Weather Dashboard</title>
-    <meta
-      name="description"
-      content="Apple-inspired weather dashboard with ZIP code support, dynamic weather scenes, and a five day forecast."
-    />
-    <link rel="icon" type="image/svg+xml" href="./favicon.svg" />
-    <link rel="preconnect" href="https://fonts.googleapis.com" />
-    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link
-      href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap"
-      rel="stylesheet"
-    />
-    <link rel="stylesheet" href="./style.css" />
-  </head>
-  <body data-weather="clear">
-    <div class="weather-scene" aria-hidden="true">
-      <div class="scene-gradient"></div>
-      <div class="scene-glow scene-glow-one"></div>
-      <div class="scene-glow scene-glow-two"></div>
-      <div class="scene-layer scene-layer-back"></div>
-      <div class="scene-layer scene-layer-mid"></div>
-      <div class="scene-layer scene-layer-front"></div>
-      <div id="weather-particles" class="weather-particles"></div>
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Weather Dashboard</title>
+<meta name="description" content="Apple-inspired weather dashboard with ZIP support, cinematic scenes, and polished forecasts." />
+<link rel="icon" type="image/svg+xml" href="./favicon.svg" />
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="./style.css" />
+<style>
+  .hero { display: block; }
+  .hero-copy-wrap { max-width: 920px; }
+</style>
+</head>
+<body data-weather="clear" data-daytime="day">
+<div class="weather-scene" aria-hidden="true">
+  <div class="scene-gradient"></div>
+  <div class="scene-starfield"></div>
+  <div class="scene-glow scene-glow-one"></div>
+  <div class="scene-glow scene-glow-two"></div>
+  <div class="scene-sun-moon"></div>
+  <div class="scene-layer scene-layer-back"></div>
+  <div class="scene-layer scene-layer-mid"></div>
+  <div class="scene-layer scene-layer-front"></div>
+  <div class="storm-flash"></div>
+  <div id="weather-particles" class="weather-particles"></div>
+</div>
+<div class="page-shell">
+  <header class="hero panel tilt-surface">
+    <div class="hero-copy-wrap">
+      <p class="eyebrow">Forecasts made simple</p>
+      <h1>Weather Dashboard</h1>
+      <p class="hero-copy">Search by city or ZIP code to view current weather conditions, an hourly snapshot, and a polished five day outlook with a cinematic reactive weather scene.</p>
     </div>
-
-    <div class="page-shell">
-      <header class="hero panel tilt-surface">
-        <div class="hero-copy-wrap">
-          <p class="eyebrow">Forecasts made simple</p>
-          <h1>Weather Dashboard</h1>
-          <p class="hero-copy">
-            Search by city or ZIP code to view current weather conditions, an hourly snapshot,
-            and a polished five day outlook with a reactive weather scene.
-          </p>
-        </div>
-        <div class="hero-chip-row">
-          <div class="hero-chip">
-            <span class="chip-label">Search</span>
-            <strong>City or ZIP</strong>
-          </div>
-          <div class="hero-chip">
-            <span class="chip-label">Experience</span>
-            <strong>Dynamic scene</strong>
-          </div>
-          <div class="hero-chip">
-            <span class="chip-label">Forecast</span>
-            <strong>Current + 5 day</strong>
-          </div>
-        </div>
-      </header>
-
-      <main class="dashboard-grid">
-        <aside class="panel search-panel tilt-surface">
-          <div class="panel-header">
-            <h2>Search</h2>
-            <p>Enter a U.S. city or ZIP code.</p>
-          </div>
-
-          <form id="search-form" class="search-form" novalidate>
-            <label class="sr-only" for="city-input">Search weather by city or ZIP code</label>
-            <div class="input-shell">
-              <input
-                type="text"
-                id="city-input"
-                name="city"
-                placeholder="Wilmington or 28451"
-                autocomplete="off"
-              />
-            </div>
-            <button type="submit" id="search-button">Get Weather</button>
-          </form>
-
-          <p id="status-message" class="status-message" aria-live="polite"></p>
-
-          <div class="history-header">
-            <h3>Recent Searches</h3>
-            <button id="clear-history" class="text-button" type="button">Clear</button>
-          </div>
-          <div id="search-history-container" class="history-list"></div>
-        </aside>
-
-        <section class="weather-column">
-          <article id="empty-state" class="panel empty-state tilt-surface">
-            <div class="empty-state-inner">
-              <h2>Ready when you are</h2>
-              <p>
-                Search for a location to load the current forecast, hourly preview, and next five days.
-              </p>
-            </div>
-          </article>
-
-          <article id="todays-forecast" class="panel current-weather hidden tilt-surface"></article>
-
-          <section id="hourly-section" class="panel hourly-section hidden tilt-surface">
-            <div class="section-heading-row">
-              <div>
-                <p class="section-eyebrow">Today</p>
-                <h2>Hourly Preview</h2>
-              </div>
-              <p class="section-subtitle">Next 24 hours at a glance.</p>
-            </div>
-            <div id="hourly-container" class="hourly-strip"></div>
-          </section>
-
-          <section id="five-day-section" class="panel forecast-section hidden tilt-surface">
-            <div class="section-heading-row">
-              <div>
-                <p class="section-eyebrow">Outlook</p>
-                <h2>5 Day Forecast</h2>
-              </div>
-              <p class="section-subtitle">A cleaner look at what is coming next.</p>
-            </div>
-            <div id="five-day-container" class="forecast-grid"></div>
-          </section>
-        </section>
-      </main>
-    </div>
-
-    <script src="./script.js"></script>
-  </body>
+  </header>
+  <main class="dashboard-grid">
+    <aside class="panel search-panel tilt-surface">
+      <div class="panel-header">
+        <h2>Search</h2>
+        <p>Enter a U.S. city or ZIP code.</p>
+      </div>
+      <form id="search-form" class="search-form" novalidate>
+        <label class="sr-only" for="city-input">Search weather by city or ZIP code</label>
+        <div class="input-shell"><input type="text" id="city-input" name="city" placeholder="Wilmington or 28451" autocomplete="off" /></div>
+        <button type="submit" id="search-button">Get Weather</button>
+      </form>
+      <p id="status-message" class="status-message" aria-live="polite"></p>
+      <div class="history-header"><h3>Recent Searches</h3><button id="clear-history" class="text-button" type="button">Clear</button></div>
+      <div id="search-history-container" class="history-list"></div>
+    </aside>
+    <section class="weather-column">
+      <article id="empty-state" class="panel empty-state tilt-surface"><div class="empty-state-inner"><h2>Ready when you are</h2><p>Search for a location to load the current forecast, hourly preview, and next five days.</p></div></article>
+      <article id="todays-forecast" class="panel current-weather hidden tilt-surface"></article>
+      <section id="hourly-section" class="panel hourly-section hidden tilt-surface"><div class="section-heading-row"><div><p class="section-eyebrow">Today</p><h2>Hourly Preview</h2></div><p class="section-subtitle">Next 24 hours at a glance.</p></div><div id="hourly-container" class="hourly-strip"></div></section>
+      <section id="five-day-section" class="panel forecast-section hidden tilt-surface"><div class="section-heading-row"><div><p class="section-eyebrow">Outlook</p><h2>5 Day Forecast</h2></div><p class="section-subtitle">A cleaner look at what is coming next.</p></div><div id="five-day-container" class="forecast-grid"></div></section>
+    </section>
+  </main>
+</div>
+<script src="./script.js"></script>
+</body>
 </html>
